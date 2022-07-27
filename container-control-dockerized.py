@@ -7,7 +7,8 @@ import json
 import argparse
 import os
 
-config_path = os.path.dirname(os.path.abspath(__file__)) + '/config.json'
+SCRIPT_DIR = filepath = os.path.dirname(os.path.abspath(__file__))
+config_path = SCRIPT_DIR + '/config.json'
 
 if not os.path.exists(config_path):
 	print(f"The config file ({config_path}) doesn't seem to exist, creating an empty config file")
@@ -29,11 +30,16 @@ MOVEATTHEEND = config["move_at_the_end"]
 def get_containers_status(socket, is_url, verbose):
 	if is_url:
 		base_url = socket
+		if verbose:
+			print("Making request to Docker API")
 		with urllib.request.urlopen(f"{base_url}containers/json?all=1") as response:
 			html = response.read()
-
+		if verbose:
+			print("Converting request to dict format")
 		answer = json.loads(html)
 		out_dict = dict()
+		if verbose:
+			print("Extracting containers names")
 		for container in answer:
 			out_dict[container['Names'][0][1:]] = container['State']
 		return out_dict
@@ -66,14 +72,20 @@ def get_running_containers(socket, is_url, verbose):
 		return running_containers
 
 def is_correct_url(string_to_test, verbose):
+	if verbose:
+		print("Using the RegExp to validate the URL")
 	url_regex = "https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}(\.[a-z]{2,4})?\\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)"
 	result = re.search(url_regex, string_to_test)
+	if verbose:
+		print(f"Is a correct URL : {result}")
 	return result
 
 def get_relevant_containers():
-	filename = "./current_containers.lst"
+	filepath = SCRIPT_DIR + "/current_containers.lst"
 	if not os.path.exists(filename):
-		raise FileNotFoundError("current_containers not found ! Be sure to execute stop THEN start")
+		raise FileNotFoundError("current_containers file not found ! Be sure to execute stop THEN start")
+	if verbose:
+		print(f"Opening {filepath} to read the relevant containers to stop")
 	with open(filename, 'r', encoding="utf8") as file:
 		output_list = [line.rstrip() for line in file]
 	return output_list
@@ -103,13 +115,22 @@ def start(socket, is_url, verbose):
 def stop(socket, is_url, verbose):
 	print("Stopping the containers")
 	containers_to_stop = get_running_containers(socket, is_url, verbose)
-	filename = "./current_containers.lst"
-	if os.path.exists(filename):
-		if os.path.exists("./old_containers.lst"):
+	filepath = SCRIPT_DIR + "/current_containers.lst"
+	old_current_containers_path = SCRIPT_DIR + "/old_containers.lst"
+	if os.path.exists(filepath):
+		if verbose:
+			print("current_containers.lst already exists")
+		if os.path.exists(old_current_containers_path):
 			# If the old file exists we delete it to continue
-			os.remove("./old_containers.lst")
-		os.rename(filename, "./old_containers.lst")
-	with open(filename, 'w', encoding="utf8") as file:
+			if verbose:
+				print("old_containers.lst already exists, removing")
+			os.remove(old_current_containers_path)
+		if verbose:
+			print("Moving current_containers.lst -> old_containers.lst")
+		os.rename(filepath, old_current_containers_path)
+	with open(filepath, 'w', encoding="utf8") as file:
+		if verbose:
+			print("Writing containers to current_containers.lst")
 		max_length = 0
 		for container in containers_to_stop:
 			if len(container) > max_length:
