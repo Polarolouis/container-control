@@ -10,7 +10,7 @@ import os
 DONTSTOPLIST = ["borgmatic", "dockerproxy"]
 MOVEATTHEEND = ["npm-app", "npm-db"]
 
-def get_containers_status(socket, is_url):
+def get_containers_status(socket, is_url, verbose):
 	if is_url:
 		base_url = socket
 		with urllib.request.urlopen(f"{base_url}containers/json?all=1") as response:
@@ -22,7 +22,9 @@ def get_containers_status(socket, is_url):
 			out_dict[container['Names'][0][1:]] = container['State']
 		return out_dict
 
-def get_running_containers(socket, is_url):
+def get_running_containers(socket, is_url, verbose):
+	if verbose:
+		print("Getting running containers :")
 	if is_url:
 		base_url = socket
 		url = f'{base_url}containers/json?' + 'filters={"status":["running"]}'
@@ -30,15 +32,24 @@ def get_running_containers(socket, is_url):
 			html = response.read()
 
 		answer = json.loads(html)
+		containers_names = [container['Names'][0][1:] for container in answer]
+		if verbose:
+			print(f"Currently those containers are running : {containers_names}")
 		running_containers = []
-		for container in answer:
-			if container['Names'][0][1:] not in DONTSTOPLIST:
-				running_containers.append(container['Names'][0][1:])
-		for container in MOVEATTHEEND:
-			running_containers.append(running_containers.pop(running_containers.index(container)))
+		for container_name in containers_names:
+			if container_name not in DONTSTOPLIST and container_name not in MOVEATTHEEND:
+				running_containers.append(container_name)
+		if verbose:
+			print(f"The following containers were excluded as they are in the DONT STOP LIST : {DONTSTOPLIST}")
+		for container_name in MOVEATTHEEND:
+			if container_name in containers_names:
+				running_containers.append(container_name)
+#			running_containers.append(running_containers.pop(running_containers.index(container)))
+		if verbose:
+			print(f"The following containers were appended at the end of the list as they are in the MOVE AT THE END list : {MOVEATTHEEND}")
 		return running_containers
 
-def is_correct_url(string_to_test):
+def is_correct_url(string_to_test, verbose):
 	url_regex = "https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}(\.[a-z]{2,4})?\\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)"
 	result = re.search(url_regex, string_to_test)
 	return result
@@ -51,7 +62,7 @@ def get_relevant_containers():
 		output_list = [line.rstrip() for line in file]
 	return output_list
 
-def start(socket, is_url):
+def start(socket, is_url, verbose):
 	print("Starting the containers")
 	containers_to_start = get_relevant_containers()
 	max_length = 0
@@ -73,9 +84,9 @@ def start(socket, is_url):
 
 
 
-def stop(socket, is_url):
+def stop(socket, is_url, verbose):
 	print("Stopping the containers")
-	containers_to_stop = get_running_containers(socket, is_url)
+	containers_to_stop = get_running_containers(socket, is_url, verbose)
 	filename = "./current_containers.lst"
 	if os.path.exists(filename):
 		if os.path.exists("./old_containers.lst"):
@@ -99,12 +110,10 @@ def stop(socket, is_url):
 						print(f"{container:<{max_length}} | Successfully stopped : {resp.getcode()}")
 
 
-def status(socket, is_url):
+def status(socket, is_url, verbose):
 	print("Fetching the status of the containers")
-	dict_status=get_containers_status(socket, is_url)
+	dict_status=get_containers_status(socket, is_url, verbose)
 	print(dict_status)
-	os.putenv("BORGMATIC_CONTAINERS_STATUS", str(dict_status))
-	os.system("bash")
 
 
 def main():
@@ -114,6 +123,9 @@ def main():
                      metavar='ACTION',
                      type=str,
                      help='the action to perform between : start, stop and status')
+	parser.add_argument('-v', '--verbose',
+				help="enable verbose mode",
+				action='store_true')
 	parser.add_argument('-s',
                      metavar='SOCKET',
                      nargs='?',
@@ -128,19 +140,21 @@ def main():
 	action = args.Action
 	socket = args.s
 	is_url = args.url
+	verbose = args.verbose
+
 	if is_url:
-		if not is_correct_url(socket):
+		if not is_correct_url(socket, verbose):
 			raise ValueError(
 				f"Incorrect URL format: {socket}\nIf the socket is not mapped to an url do not use the --url flag!")
 		if socket[-1] != "/":
 			socket += '/'
 
 	if action == "start":
-		start(socket, is_url)
+		start(socket, is_url, verbose=verbose)
 	elif action == "stop":
-		stop(socket, is_url)
+		stop(socket, is_url, verbose=verbose)
 	elif action == "status":
-		status(socket, is_url)
+		status(socket, is_url, verbose=verbose)
 	else:
 		raise ValueError(f"Unknown ACTION:{action}")
 
