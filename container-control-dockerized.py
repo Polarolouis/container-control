@@ -7,8 +7,24 @@ import json
 import argparse
 import os
 
-DONTSTOPLIST = ["borgmatic", "dockerproxy"]
-MOVEATTHEEND = ["npm-app", "npm-db"]
+config_path = os.path.dirname(os.path.abspath(__file__)) + '/config.json'
+
+if not os.path.exists(config_path):
+	print(f"The config file ({config_path}) doesn't seem to exist, creating an empty config file")
+	with open(config_path, 'w', encoding='utf8') as config_file:
+		config = {"dont_stop":[], "move_at_the_end":[]}
+		json.dump(config, config_file)
+
+with open(config_path, 'r', encoding='utf8') as config_file:
+	config = json.load(config_file)
+
+print(config)
+
+DONTSTOPLIST = config["dont_stop"]
+MOVEATTHEEND = config["move_at_the_end"]
+
+#print(DONTSTOPLIST)
+#print(MOVEATTHEEND)
 
 def get_containers_status(socket, is_url, verbose):
 	if is_url:
