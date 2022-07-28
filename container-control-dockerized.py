@@ -80,7 +80,7 @@ def is_correct_url(string_to_test, verbose):
 		print(f"Is a correct URL : {result}")
 	return result
 
-def get_relevant_containers():
+def get_relevant_containers(verbose):
 	filepath = SCRIPT_DIR + "/current_containers.lst"
 	if not os.path.exists(filepath):
 		raise FileNotFoundError("current_containers file not found ! Be sure to execute stop THEN start")
@@ -92,7 +92,7 @@ def get_relevant_containers():
 
 def start(socket, is_url, verbose):
 	print("Starting the containers")
-	containers_to_start = get_relevant_containers()
+	containers_to_start = get_relevant_containers(verbose)
 	max_length = 0
 	for container in containers_to_start:
 		if len(container) > max_length:
