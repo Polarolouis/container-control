@@ -82,11 +82,11 @@ def is_correct_url(string_to_test, verbose):
 
 def get_relevant_containers():
 	filepath = SCRIPT_DIR + "/current_containers.lst"
-	if not os.path.exists(filename):
+	if not os.path.exists(filepath):
 		raise FileNotFoundError("current_containers file not found ! Be sure to execute stop THEN start")
 	if verbose:
 		print(f"Opening {filepath} to read the relevant containers to stop")
-	with open(filename, 'r', encoding="utf8") as file:
+	with open(filepath, 'r', encoding="utf8") as file:
 		output_list = [line.rstrip() for line in file]
 	return output_list
 
