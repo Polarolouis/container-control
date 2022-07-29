@@ -131,10 +131,8 @@ def get_relevant_containers(verbose):
 def start(socket, is_url, verbose):
     print("Starting the containers")
     containers_to_start = get_relevant_containers(verbose)
-    max_length = 0
-    for container in containers_to_start:
-        if len(container) > max_length:
-            max_length = len(container)
+    max_length = len(max(containers_to_start, key=len))
+
     for container in containers_to_start:
         if is_url:
             url = socket + f"containers/{container}/start"
@@ -157,6 +155,7 @@ def stop(socket, is_url, verbose):
         socket, is_url, verbose, db_at_start=True)
     containers_order_stop = get_running_containers(
         socket, is_url, verbose, db_at_start=False)
+    max_length = len(max(containers_order_stop, key=len))
     filepath = SCRIPT_DIR + "/current_containers.lst"
     old_current_containers_path = SCRIPT_DIR + "/old_containers.lst"
     if os.path.exists(filepath):
@@ -173,11 +172,8 @@ def stop(socket, is_url, verbose):
     with open(filepath, 'w', encoding="utf8") as file:
         if verbose:
             print("Writing containers to current_containers.lst")
-        max_length = 0
         for container in containers_order_start:
             # Writing the start order for containers, restarting the DB first and then the Apps
-            if len(container) > max_length:
-                max_length = len(container)
             file.write(container + "\n")
         for container in containers_order_stop:
             # Stopping the apps, and then stopping the DB
