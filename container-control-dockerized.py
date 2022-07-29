@@ -50,7 +50,7 @@ def get_containers_status(socket, is_url, verbose):
 def container_is_db(container_name, verbose):
     if verbose:
         print(f"Checking if {container_name} is a database")
-    database_regexp = "[a-z0-9_-]*(db$|database$)"
+    database_regexp = "[a-z0-9_-]*(db$|database$|postgres$)"
     result = re.search(database_regexp, container_name)
     if result:
         return True
